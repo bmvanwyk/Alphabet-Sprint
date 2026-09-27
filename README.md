@@ -57,8 +57,18 @@ kids **see** their streak catch fire and feel it evaporate when they slip — no
 - Timing uses **`event.timeStamp` / `performance.now()`** (never `Date.now()`), ignores OS
   key-repeat, so measurements come from real input events — not render frames
 
+*Milestone pulse at letter 15 (heat tier "glowing", gold streak meter):*
+
 ![gold milestone beat](screenshots/03-milestone-gold.png)
+
+*Miss state: wrong key flashes red, honest +0.5s, run continues:*
+
 ![miss highlight](screenshots/04-miss.png)
+
+*Finish: giant glowing time — and on a personal best, a second confetti wave fires:*
+
+![finish with PB confetti](screenshots/09-finish-noir.png)
+![PB second wave](screenshots/09b-pb-wave2.png)
 
 ## Themes 🎨
 
@@ -74,8 +84,19 @@ Three looks, switchable from chips in the footer, remembered across visits
 Light-theme and retro alternates (Sunset Arcade, Ocean Deep, license-safe retro blocks) are
 sketched in [THEMES-AND-LAYOUT.md](THEMES-AND-LAYOUT.md) for v0.5.
 
-![paper theme](screenshots/07-theme-paper.png)
-![terminal theme](screenshots/08-theme-term.png)
+**All three themes, side by side:**
+
+**Arcade Noir** (default):
+
+![Arcade Noir](screenshots/10-theme-noir.png)
+
+**Paper Sprint**:
+
+![Paper Sprint](screenshots/11-theme-paper.png)
+
+**Terminal '86**:
+
+![Terminal '86](screenshots/12-theme-term.png)
 
 ## Run it
 
