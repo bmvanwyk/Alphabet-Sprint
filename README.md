@@ -6,7 +6,18 @@ A tiny, loud, glowing keyboard race built for kids (ADHD-first: every keypress f
 pop + particle halo in the *same frame*) and competitive adults (SQLite leaderboard,
 spoof-resistant scoring). No email, no accounts drama — username + password only.
 
-![finish line](screenshots/05-pb-finish.png)
+*(Arcade Noir theme, mid-run: keyboard is the hero, board tucked away below)*
+
+![v0.4 hero — keyboard centred, streak 10 hot](screenshots/06-v04-hero.png)
+
+## Keyboard-first controls
+
+- **⌨️ Just type**: `a` starts the clock. Or **`SPACE` / `ENTER`** to arm a run, and after a
+  finish, to fire straight into the next one. The whole loop — play, finish, restart — is
+  hands-on-keys, zero mouse.
+- **Leaderboard stays out of the way**: it lives **below** the race, full while you're lining up,
+  **collapses to a dim strip mid-run**, and pops back the instant your time lands. Your eyes
+  never leave the keyboard.
 
 ## How it works
 
@@ -25,22 +36,20 @@ spoof-resistant scoring). No email, no accounts drama — username + password on
 Consecutive correct keys **physically warm the keyboard**. Every 5 clean keys, the whole
 keycap row shifts one tier hotter — and one wrong key cools it instantly:
 
-| Streak | Tier | Default — cyan | green | gold | magenta | **orange + blaze** |
-|--------|------|-----|-------|------|---------|--------------------|
-| | | 5 keys | 10 | 15 | 20 | 25+ — "NUCLEAR" |
+| Streak | 5 keys | 10 | 15 | 20 | 25+ |
+|--------|--------|----|----|----|-----|
+| Tier | cyan | green | gold | magenta | **orange + blaze — "NUCLEAR"** |
 
-The tiny heat meter above the keyboard counts your live streak with the tier name
+The heat meter above the keyboard counts your live streak and names the tier
 (*warm → hot → glowing → blazing → NUCLEAR*), so accuracy becomes self-motivating:
 kids **see** their streak catch fire and feel it evaporate when they slip — no lecture needed.
-
-![streak heat at 10](screenshots/02-midrun-streak10.png)
 
 ## Juice (this matters)
 
 - **Every correct key, same frame**: rising musical blip (a→z is a pitch staircase), letter pop,
   neon keycap flash, particle burst **anchored at the key itself** (never a screen-wide explosion)
 - **Every 5th key**: a subtle gold pulse beat at that key — the chunking rhythm mid-run, no confetti
-- **Every 5 streak**: heat tier up (see above), `streak N — hot/glowing/blazing/NUCLEAR`
+- **Every 5 streak**: heat tier up (see above)
 - **Finish line**: fanfare + one modest confetti burst + giant glowing time
 - **Personal best**: a **second staggered confetti wave** — beating yourself *feels* bigger
 - **Miss**: red keycap + shake + honest "+0.5s" — never a dead end, never a fail screen;
@@ -48,8 +57,25 @@ kids **see** their streak catch fire and feel it evaporate when they slip — no
 - Timing uses **`event.timeStamp` / `performance.now()`** (never `Date.now()`), ignores OS
   key-repeat, so measurements come from real input events — not render frames
 
-![milestone gold beat](screenshots/03-milestone-gold.png)
+![gold milestone beat](screenshots/03-milestone-gold.png)
 ![miss highlight](screenshots/04-miss.png)
+
+## Themes 🎨
+
+Three looks, switchable from chips in the footer, remembered across visits
+(`localStorage`), zero reload:
+
+| Theme | Look | Feel |
+|-------|------|------|
+| 🌑 **Arcade Noir** *(default)* | navy-black, neon cyan/magenta/gold | the kids' high-energy home base |
+| 📜 **Paper Sprint** | cream paper, ink text, teal accents | calm schoolroom, daylight-friendly |
+| 💚 **Terminal '86** | phosphor green monospace + green scanlines | speedrun hacker, keyboard-native |
+
+Light-theme and retro alternates (Sunset Arcade, Ocean Deep, license-safe retro blocks) are
+sketched in [THEMES-AND-LAYOUT.md](THEMES-AND-LAYOUT.md) for v0.5.
+
+![paper theme](screenshots/07-theme-paper.png)
+![terminal theme](screenshots/08-theme-term.png)
 
 ## Run it
 
@@ -86,12 +112,13 @@ Data lives in `~/.alphabet-sprint/` (SQLite DB + HMAC secret), deliberately **ou
 - **Privacy:** username + password only. No email. No PII. Passwords are never stored in plaintext
   (PBKDF2-SHA256, per-user salt).
 
-## Roadmap (v0.4 stretch)
+## Roadmap (v0.5)
 
 - [ ] **Daily seed** — everyone gets the same sequence; comparable daily times
 - [ ] **Ghost replay** — translucent ghost of your PB races beside you
 - [ ] Escalating back-half intensity (pulse/comet trail speed up past letter N)
+- [ ] Sunset Arcade + Ocean Deep themes, "Calm mode" (softer palette + reduced particles)
 
 ---
 
-*Built with my kids as the primary playtesters. v0.3*
+*Built with my kids as the primary playtesters. v0.4*
