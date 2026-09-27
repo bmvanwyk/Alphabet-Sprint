@@ -1,0 +1,22 @@
+# --- local data (never commit) ---
+alphabet-sprint/
+scratch/
+*.log
+screenshots/*.png.bak
+
+# --- python ---
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# --- secrets & data that must NEVER be in the repo ---
+.secret
+sprint.db
+sprint.db-journal
+sprint.db-wal
+sprint.db-shm
+
+# --- os cruft ---
+.DS_Store
+Thumbs.db

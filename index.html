@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alphabet Sprint — a→z eat the clock</title>
+<style>
+:root{--bg:#0a0a12;--panel:#11111d;--line:#23233a;--cyan:#00e5ff;--magenta:#ff2bd6;--red:#ff3b53;--green:#2bd66f;--gold:#ffd54a;--dim:#8787a0}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:#eaeaf2;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden;position:relative;user-select:none}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:999;background:repeating-linear-gradient(0deg,rgba(255,255,255,.028) 0 1px,transparent 1px 3px)}
+h1{font-size:2.6rem;margin:28px 0 4px;text-align:center;background:linear-gradient(90deg,var(--cyan),var(--magenta));-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:2px;text-shadow:0 0 24px rgba(0,229,255,.35)}
+.tagline{color:var(--dim);margin-bottom:20px;text-align:center;font-size:.95rem}
+.wrap{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;width:100%;max-width:980px;margin:0 auto;padding:0 16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px 22px;min-width:300px;flex:1;max-width:440px;box-shadow:0 0 24px rgba(0,0,0,.4);content-visibility:auto}
+.panel h2{font-size:1.05rem;margin-bottom:12px;color:var(--cyan);letter-spacing:1px}
+.btn{cursor:pointer;border-radius:8px;padding:10px 18px;font-size:.95rem;font-weight:600;background:transparent;color:var(--cyan);border:1px solid var(--cyan);transition:all .15s}
+.btn:hover{box-shadow:0 0 14px rgba(0,229,255,.4);transform:translateY(-1px)}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn.ghost{color:var(--dim);border-color:var(--line)}
+.btn.ghost:hover{color:var(--cyan);border-color:var(--cyan)}
+input{width:100%;padding:10px 12px;margin:6px 0;border-radius:8px;border:1px solid var(--line);background:#0d0d18;color:#eaeaf2;font-size:.95rem}
+input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 8px rgba(0,229,255,.3)}
+.timer{font-size:3.4rem;font-weight:800;text-align:center;margin:6px 0;color:var(--cyan);text-shadow:0 0 18px rgba(0,229,255,.4);font-variant-numeric:tabular-nums;min-height:3.4rem}
+.timer.hot{color:var(--gold);text-shadow:0 0 26px rgba(255,213,74,.55)}
+.timer.pb{color:var(--green);text-shadow:0 0 26px rgba(43,214,111,.55)}
+.penalty{color:var(--magenta);font-size:.85rem;text-align:center;min-height:1.1rem}
+.chain{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin:16px 0;min-height:34px}
+.letter{width:29px;height:33px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-weight:700;font-size:.95rem;border:1px solid var(--line);color:var(--dim);background:#0d0d18;position:relative}
+/* instant highlight: NO transition on colour, only glow decay */
+.letter.next{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 10px rgba(0,229,255,.55);animation:pulse 1s infinite}
+@keyframes pulse{50%{box-shadow:0 0 20px rgba(0,229,255,.75)}}
+.letter.done{background:rgba(0,229,255,.09);color:var(--cyan);border-color:rgba(0,229,255,.45)}
+.letter.pop{animation:pop .18s ease-out}
+@keyframes pop{0%{transform:scale(1)}55%{transform:scale(1.45)}100%{transform:scale(1)}}
+.letter.miss{background:rgba(255,59,83,.2)!important;color:var(--red)!important;border-color:var(--red)!important}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:7px 6px;text-align:left;border-bottom:1px solid var(--line)}
+th{color:var(--dim);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.5px}
+tr.me td{color:var(--green)}
+.badge{font-size:.7rem;padding:2px 8px;border-radius:10px;border:1px solid var(--line);color:var(--dim)}
+.badge.you{border-color:var(--green);color:var(--green)}
+.modes{display:flex;gap:8px;margin-bottom:12px}
+.mode{flex:1;text-align:center;cursor:pointer;padding:8px 4px;border-radius:8px;border:1px solid var(--line);font-size:.8rem;color:var(--dim);user-select:none}
+.mode.active{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 8px rgba(0,229,255,.3)}
+#status{text-align:center;color:var(--dim);margin:2px 0 14px;min-height:1.4rem;font-size:.95rem}
+#status.err{color:var(--red)}#status.ok{color:var(--green)}
+/* streak flame */
+#streak{position:fixed;left:50%;top:12%;transform:translateX(-50%);font-size:2.2rem;font-weight:900;color:var(--gold);text-shadow:0 0 18px rgba(255,213,74,.6);opacity:0;pointer-events:none;z-index:1000}
+#streak.show{animation:streakPop .7s ease-out}
+@keyframes streakPop{0%{opacity:0;transform:translate(-50%,12px) scale(.6)}25%{opacity:1;transform:translate(-50%,0) scale(1.15)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-18px) scale(.9)}}
+/* floating reward words */
+/* floating reward words */
+#cheer{position:fixed;left:50%;top:32%;font-size:2.1rem;font-weight:900;pointer-events:none;z-index:997;opacity:0;white-space:nowrap}
+#cheer.show{animation:cheerFloat 1s ease-out}
+@keyframes cheerFloat{0%{opacity:0;transform:translate(-50%,14px) scale(.7)}22%{opacity:1;transform:translate(-50%,0) scale(1.12)}62%{opacity:.95}100%{opacity:0;transform:translate(-50%,-30px) scale(.95)}}
+#authArea{display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap}
+#authArea input{margin:0;flex:1;min-width:120px}
+footer{text-align:center;color:var(--dim);font-size:.78rem;padding:24px 0;margin-top:auto}
+@keyframes shake{0%,100%{transform:translate(0)}25%{transform:translate(-4px,2px)}50%{transform:translate(4px,-2px)}75%{transform:translate(-3px,1px)}}
+body.shake{animation:shake .12s}
+/* milestone flash */
+#flash{position:fixed;inset:0;background:radial-gradient(circle,rgba(255,213,74,.16) 0%,transparent 62%);opacity:0;pointer-events:none;z-index:998}
+#flash.go{animation:flashGo .35s ease-out}
+@keyframes flashGo{0%{opacity:0}35%{opacity:1}100%{opacity:0}}
+/* keyboard                                                                             */
+.kb{display:flex;justify-content:center;gap:2px;flex-wrap:wrap;margin-bottom:10px}
+.cap{min-width:22px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid var(--line);background:#0d0d18;color:var(--dim);font-size:.65rem;font-weight:700}
+.cap.hit{background:rgba(0,229,255,.2);color:var(--cyan);border-color:rgba(0,229,255,.5);box-shadow:0 0 8px rgba(0,229,255,.45)}
+.cap.bad{background:rgba(255,59,83,.25);color:var(--red);border-color:var(--red)}
+@media(max-width:720px){h1{font-size:2rem}.timer{font-size:2.4rem}.panel{max-width:none;width:100%}}
+/* confetti for finish line */
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:1001}
+</style>
+</head>
+<body>
+<h1>⚡ ALPHABET SPRINT</h1>
+<p class="tagline">type a → z, eat the clock — wrong keys cost +0.5s</p>
+<div id="status"></div>
+<div id="streak"></div>
+<div id="cheer"></div>
+<div id="flash"></div>
+<canvas id="confetti"></canvas>
+<div class="wrap">
+  <div class="panel">
+    <h2>RACE</h2>
+    <div class="modes">
+      <div class="mode active" data-mode="sprint">🏃 SPRINT</div>
+      <div class="mode" data-mode="lockout">🔒 LOCKOUT</div>
+      <div class="mode" data-mode="combo">🔥 COMBO</div>
+    </div>
+    <div class="chain" id="chain"></div>
+    <div class="kb" id="kb"></div>
+    <div class="timer" id="timer">0.00</div>
+    <div class="penalty" id="penalty"></div>
+    <button class="btn" id="startBtn" style="width:100%;margin-top:10px">START SPRINT</button>
+  </div>
+  <div class="panel">
+    <h2>LEADERBOARD <span class="badge" id="modeBadge">sprint</span></h2>
+    <table>
+      <thead><tr><th>#</th><th>Player</th><th>Time</th><th>Miss</th><th>When</th></tr></thead>
+      <tbody id="board"></tbody>
+    </table>
+    <div id="authArea"></div>
+  </div>
+</div>
+<canvas id="fx" style="position:fixed;inset:0;pointer-events:none;z-index:998"></canvas>
+<footer>v0.2 · sqlite leaderboard · username+password only, no email · ⌨️ start typing anytime</footer>
+<script>
+'use strict';
+const A='abcdefghijklmnopqrstuvwxyz'.split('');
+const MISS_PENALTY=0.5;
+const TOKEN_KEY='as_token', NAME_KEY='as_name';
+/* ADHD-first design: every single correct key fires AT LEAST three different rewards within the same frame:
+ * 1. fast blip (rising musical staircase) 2. firework burst 3. letter pop + neon keycap.
+ * Every 5 letters: streak badge + screen flash + confetti burst.
+ * Lockout mode resets to 'a' but keeps misses counted as progress toward combo.
+ * No waiting, no modal, no fail screen — the run NEVER dead-ends. */
+const nowHi=()=>performance.now();
+
+/* ---------- API ---------- */
+const api=async(path,body)=>{
+  const headers={'Content-Type':'application/json'};
+  const t=localStorage.getItem(TOKEN_KEY);
+  if(t)headers.Authorization='Bearer '+t;
+  const r=await fetch('/api'+path,{method:body?'POST':'GET',headers,body:body?JSON.stringify(body):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.detail||r.statusText);
+  return j;
+};
+
+/* ---------- state ---------- */
+let mode='sprint',chain=0,misses=0,t0=0,running=false,raf=null,hot=false;
+const me=()=>localStorage.getItem(NAME_KEY);
+
+/* ---------- auth (username + password only, no email) ---------- */
+function renderAuth(){
+  const area=document.getElementById('authArea'),u=me();
+  area.textContent='';
+  if(u){
+    const badge=document.createElement('span');badge.className='badge you';badge.textContent='👤 '+u;
+    const btn=document.createElement('button');btn.className='btn ghost';btn.style.padding='6px 12px';btn.style.fontSize='.8rem';btn.textContent='logout';
+    btn.onclick=()=>{localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(NAME_KEY);renderAuth();renderBoard();};
+    area.appendChild(badge);area.appendChild(document.createTextNode(' '));area.appendChild(btn);
+  }else{
+    const iu=document.createElement('input');iu.id='au';iu.placeholder='username';iu.maxLength=20;iu.autocomplete='username';
+    const ip=document.createElement('input');ip.id='ap';ip.type='password';ip.placeholder='password';ip.maxLength=64;ip.autocomplete='current-password';
+    const b=document.createElement('button');b.className='btn';b.style.padding='8px 14px';b.style.fontSize='.85rem';b.textContent='sign up / log in';
+    b.onclick=doAuth;
+    [iu,ip].forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter')doAuth();}));
+    area.appendChild(iu);area.appendChild(ip);area.appendChild(b);
+  }
+}
+async function doAuth(){
+  const u=document.getElementById('au').value.trim(),p=document.getElementById('ap').value;
+  const st=document.getElementById('status');
+  try{
+    try{await api('/register',{username:u,password:p});}
+    catch(e){if(!/taken/i.test(e.message))throw e;}
+    const out=await api('/login',{username:u,password:p});
+    localStorage.setItem(TOKEN_KEY,out.token);localStorage.setItem(NAME_KEY,u);
+    st.textContent='hi '+u+'! your runs now go on the board';st.className='ok';
+    document.getElementById('au').value='';document.getElementById('ap').value='';
+    renderAuth();renderBoard();
+  }catch(err){st.textContent=err.message;st.className='err';}
+}
+
+/* ---------- audio: rising staircase + fanfare ---------- */
+let AC=null,muted=false;
+function blip(f,miss){
+  if(muted)return;
+  if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();
+  const o=AC.createOscillator(),g=AC.createGain();
+  o.type=miss?'sawtooth':'triangle';o.frequency.value=f;
+  g.gain.setValueAtTime(miss?.12:.09,AC.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+(miss?.12:.10));
+  o.connect(g);g.connect(AC.destination);o.start();o.stop(AC.currentTime+.11);
+}
+function fanfare(){
+  if(muted)return;
+  if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();
+  [523,659,784,1047].forEach((f,i)=>{
+    const o=AC.createOscillator(),g=AC.createGain();
+    o.type='triangle';o.frequency.value=f;
+    const t=AC.currentTime+i*.09;
+    g.gain.setValueAtTime(.11,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);
+    o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+.26);
+  });
+}
+
+/* ---------- canvas FX: fireworks + confetti ---------- */
+const cv=document.getElementById('fx'),cx=cv.getContext('2d');
+const cf=document.getElementById('confetti'),cfx=cf.getContext('2d');
+const resize=()=>{cv.width=cf.width=innerWidth;cv.height=cf.height=innerHeight;};
+resize();onresize=resize;
+let parts=[],confetti=[];
+const CSSV=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const pw=(x,y,c,n=12)=>{for(let i=0;i<n;i++){const a=Math.random()*6.283,s=1+Math.random()*2.6;
+  parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,c});}};
+function confettiBurst(){
+  const cols=['#00e5ff','#ff2bd6','#2bd66f','#ffd54a','#ff9f43'];
+  for(let i=0;i<80;i++){
+    confetti.push({x:innerWidth/2+(Math.random()-.5)*260,y:innerHeight*.42,
+      vx:(Math.random()-.5)*9,vy:-5-Math.random()*7,g:.22+Math.random()*.14,
+      rot:Math.random()*6.283,vr:(Math.random()-.5)*.4,c:cols[i%5],w:4+Math.random()*4,h:6+Math.random()*5,life:.9});
+  }
+}
+(function loop(){
+  cx.clearRect(0,0,cv.width,cv.height);cfx.clearRect(0,0,cf.width,cf.height);
+  parts=parts.filter(p=>p.life>0);
+  parts.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.04;p.life-=.045;
+    cx.globalAlpha=Math.max(0,p.life);cx.fillStyle=p.c;cx.beginPath();cx.arc(p.x,p.y,2.2,0,6.283);cx.fill();});
+  confetti=confetti.filter(p=>p.life>0&&p.y<innerHeight+40);
+  confetti.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=p.g;p.rot+=p.vr;p.life-=.004;
+    cfx.save();cfx.translate(p.x,p.y);cfx.rotate(p.rot);cfx.globalAlpha=Math.max(0,Math.min(1,p.life));cfx.fillStyle=p.c;cfx.fillRect(-p.w/2,-p.h/2,p.w,p.h);cfx.restore();});
+  requestAnimationFrame(loop);
+})();
+
+/* ---------- keyboard visual ---------- */
+const kbEl=document.getElementById('kb');
+function renderKb(){
+  kbEl.textContent='';
+  A.forEach(l=>{const c=document.createElement('div');c.className='cap';c.textContent=l.toUpperCase();kbEl.appendChild(c);});
+}
+function flashKb(idx,good){
+  const c=kbEl.children[idx];if(!c)return;
+  c.classList.add(good?'hit':'bad');
+  setTimeout(()=>{c.classList.remove('hit','bad');},good?170:130);
+}
+
+/* ---------- chain ---------- */
+function renderChain(){
+  const el=document.getElementById('chain');el.textContent='';
+  A.forEach((l,i)=>{
+    const d=document.createElement('div');d.className='letter';d.textContent=l.toUpperCase();
+    if(i<chain){d.classList.add('done');if(chain===26)d.classList.remove('done');}
+    else if(i===chain)d.classList.add('next');
+    el.appendChild(d);
+  });
+}
+function popLetter(idx){const el=document.getElementById('chain').children[idx];if(el){el.classList.add('pop');setTimeout(()=>el.classList.remove('pop'),200);}}
+function penaltyText(){
+  const el=document.getElementById('penalty');
+  if(mode==='lockout')el.textContent='🔒 miss = back to a (keep going!)';
+  else if(mode==='combo')el.textContent=`🔥 streak ×${Math.min(chain+1,12)}`;
+  else el.textContent=misses?`+${(misses*MISS_PENALTY).toFixed(1)}s · ${misses} wrong key${misses>1?'s':''}`:'';
+}
+
+/* ---------- rewards ---------- */
+const CHEERS=['NICE!','GO GO GO!','FAST!','ON FIRE!','KEEP GOING!','YES!','WILD!','ZOOM!','BOOM!','UNSTOPPABLE!'];
+let lastCheerAt=0;
+function cheer(text,gold){
+  const c=document.getElementById('cheer');
+  c.textContent=text;c.style.color=gold?'var(--gold)':'var(--cyan)';
+  c.classList.remove('show');void c.offsetWidth;c.classList.add('show');
+}
+function showStreak(n){
+  const s=document.getElementById('streak');
+  s.textContent='🔥 ×'+n;s.classList.remove('show');void s.offsetWidth;s.classList.add('show');
+}
+function flashScreen(){
+  const f=document.getElementById('flash');f.classList.remove('go');void f.offsetWidth;f.classList.add('go');
+}
+
+/* ---------- game ---------- */
+const startBtn=document.getElementById('startBtn');
+const timerEl=document.getElementById('timer');
+function startGame(){
+  chain=0;misses=0;t0=0;running=false;hot=false;cancelAnimationFrame(raf);
+  timerEl.textContent='0.00';timerEl.className='timer';document.getElementById('penalty').textContent='';
+  const st=document.getElementById('status');st.textContent='type a to start…';st.className='';
+  startBtn.disabled=true;renderChain();
+}
+startBtn.onclick=startGame;
+document.querySelectorAll('.mode').forEach(m=>m.onclick=()=>{
+  document.querySelectorAll('.mode').forEach(x=>x.classList.remove('active'));
+  m.classList.add('active');mode=m.dataset.mode;
+  document.getElementById('modeBadge').textContent=mode;
+  if(!running){renderChain();penaltyText();}
+});
+window.addEventListener('keydown',e=>{if(!e.repeat)onKey(e);});
+function onKey(e){
+  const ts=(typeof e.timeStamp==='number'&&e.timeStamp>0)?e.timeStamp:nowHi();
+  const a=document.activeElement;
+  if(a&&(a.tagName==='INPUT'||a.tagName==='TEXTAREA'))return;
+  const k=(e.key||'').toLowerCase();
+  if(!/^[a-z]$/.test(k))return;
+  e.preventDefault();
+  const expected=A[chain]??'a';
+  const st=document.getElementById('status');
+  if(k!==expected){
+    misses++;
+    if(mode==='lockout'){chain=0;renderChain();}
+    st.textContent=mode==='lockout'?'💥 back to a — go go go!':'✗ oops (+0.5s) — keep going!';
+    st.className='err';
+    blip(150,true);flashKb(A.indexOf(k),false);
+    document.body.classList.add('shake');setTimeout(()=>document.body.classList.remove('shake'),130);
+    const el=document.getElementById('chain').children[Math.min(chain,25)];
+    if(el){el.classList.add('miss');setTimeout(()=>el.classList.remove('miss'),180);}
+    if(running)penaltyText();
+    return;
+  }
+  /* ---- correct key: layered reward, same frame ---- */
+  if(!running){t0=ts;running=true;}
+  const f=226+chain*30;                       // rising musical staircase a→z
+  blip(f,false);
+  popLetter(chain);
+  flashKb(chain,true);
+  const colors=[CSSV('--cyan'),CSSV('--magenta'),CSSV('--green'),CSSV('--gold')];
+  pw(innerWidth/2+(Math.random()-.5)*300,innerHeight*.42,colors[chain%4],14);
+  timerEl.classList.add('hot');
+  chain++;
+  /* every 5 letters: big moment */
+  if(chain%5===0&&chain<26){
+    showStreak(chain);
+    flashScreen();
+    if(Date.now()-lastCheerAt>700){cheer(CHEERS[(chain/5-1)%CHEERS.length],chain>=20);lastCheerAt=Date.now();}
+    confettiBurst();
+  }
+  penaltyText();renderChain();
+  st.textContent='';st.className='';
+  if(chain>=26)finishRun(ts);
+}
+function tickTimer(){
+  if(!running)return;
+  const el=(performance.now()-t0)/1000;
+  timerEl.textContent=el.toFixed(2);
+  raf=requestAnimationFrame(tickTimer);
+}
+async function finishRun(endTs){
+  running=false;cancelAnimationFrame(raf);
+  const end=(endTs??nowHi());
+  const raw=Math.max(0,end-t0)/1000;
+  const pen=(mode!=='lockout')?misses*MISS_PENALTY:0;
+  const final=Math.round((raw+pen)*100)/100;
+  timerEl.textContent=final.toFixed(2);
+  timerEl.classList.remove('hot');
+  document.getElementById('penalty').textContent=`raw ${raw.toFixed(2)}s + ${pen.toFixed(1)}s penalty`;
+  const st=document.getElementById('status');st.textContent='🏁 FINISHED! brilliant!';st.className='ok';
+  startBtn.disabled=false;startBtn.textContent='GO AGAIN';
+  isPBCheck(final);
+  cheer('🏁 '+final.toFixed(2)+'s',true);
+  fanfare();confettiBurst();confettiBurst();
+  timerEl.classList.add('pb');setTimeout(()=>timerEl.classList.remove('pb'),3500);
+  const u=me();
+  if(u){
+    try{await api('/score',{mode,final,raw:Math.round(raw*100)/100,misses});}
+    catch(err){st.textContent='score not saved: '+err.message;st.className='err';}
+  }
+  renderBoard();
+}
+function isPBCheck(final){
+  const k='as_pb_'+mode;
+  const pb=parseFloat(localStorage.getItem(k)||'0');
+  if(!pb||final<pb){localStorage.setItem(k,String(final));if(pb)cheer('🏆 NEW PERSONAL BEST!',true);}
+}
+
+/* ---------- leaderboard ---------- */
+async function renderBoard(){
+  try{
+    const rows=await api('/board?mode='+mode);
+    const tb=document.getElementById('board');tb.textContent='';
+    const meName=me();
+    rows.slice(0,10).forEach((s,i)=>{
+      const tr=document.createElement('tr');
+      if(s.username===meName)tr.className='me';
+      const c1=document.createElement('td');c1.textContent=i+1;
+      const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
+      c1.textContent=medal||(i+1);
+      const c2=document.createElement('td');c2.textContent=s.username;
+      const c3=document.createElement('td');c3.textContent=s.final.toFixed(2)+'s';
+      const c4=document.createElement('td');c4.textContent=s.misses;
+      const c5=document.createElement('td');c5.textContent=new Date(s.ts).toLocaleDateString();
+      tr.append(c1,c2,c3,c4,c5);tb.appendChild(tr);
+    });
+    if(!rows.length)tb.innerHTML='<tr><td colspan="5" style="color:var(--dim)">no runs yet — be first!</td></tr>';
+  }catch(err){
+    const tb=document.getElementById('board');tb.textContent='';
+    const tr=document.createElement('tr');const td=document.createElement('td');td.colSpan=5;
+    td.style.color='var(--red)';td.textContent='leaderboard unavailable: '+err.message;
+    tr.appendChild(td);tb.appendChild(tr);
+  }
+}
+
+renderAuth();renderKb();renderChain();penaltyText();renderBoard();
+</script>
+</body>
+</html>
