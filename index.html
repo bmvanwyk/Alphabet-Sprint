@@ -34,6 +34,7 @@ input:focus{outline:none;border-color:var(--cyan);box-shadow:0 0 8px rgba(0,229,
 .letter.pop{animation:pop .18s ease-out}
 @keyframes pop{0%{transform:scale(1)}55%{transform:scale(1.45)}100%{transform:scale(1)}}
 .letter.miss{background:rgba(255,59,83,.2)!important;color:var(--red)!important;border-color:var(--red)!important}
+.letter.mile{background:rgba(255,213,74,.22)!important;color:var(--gold)!important;border-color:var(--gold)!important;box-shadow:0 0 16px rgba(255,213,74,.7)}
 table{width:100%;border-collapse:collapse;font-size:.9rem}
 th,td{padding:7px 6px;text-align:left;border-bottom:1px solid var(--line)}
 th{color:var(--dim);font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.5px}
@@ -68,6 +69,23 @@ body.shake{animation:shake .12s}
 .cap{min-width:22px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:4px;border:1px solid var(--line);background:#0d0d18;color:var(--dim);font-size:.65rem;font-weight:700}
 .cap.hit{background:rgba(0,229,255,.2);color:var(--cyan);border-color:rgba(0,229,255,.5);box-shadow:0 0 8px rgba(0,229,255,.45)}
 .cap.bad{background:rgba(255,59,83,.25);color:var(--red);border-color:var(--red)}
+/* ambient streak backlight: whole keycap row tints by consecutive streak */
+.kb[data-tier="1"] .cap.hit{background:rgba(0,229,255,.2);border-color:rgba(0,229,255,.5);box-shadow:0 0 8px rgba(0,229,255,.45)}
+.kb[data-tier="2"] .cap.hit{background:rgba(43,214,111,.24);color:#7dffb8;border-color:rgba(43,214,111,.65);box-shadow:0 0 12px rgba(43,214,111,.6);transition:box-shadow .4s,background .4s,border-color .4s}
+.kb[data-tier="3"] .cap.hit{background:rgba(255,213,74,.26);color:#ffe58f;border-color:rgba(255,213,74,.7);box-shadow:0 0 14px rgba(255,213,74,.65);transition:box-shadow .4s,background .4s,border-color .4s}
+.kb[data-tier="4"] .cap.hit{background:rgba(255,43,214,.28);color:#ff9ae6;border-color:rgba(255,43,214,.75);box-shadow:0 0 16px rgba(255,43,214,.7);transition:box-shadow .4s,background .4s,border-color .4s}
+.kb[data-tier="5"] .cap.hit{background:rgba(255,122,43,.3);color:#ffc39a;border-color:rgba(255,122,43,.8);box-shadow:0 0 18px rgba(255,122,43,.8);transition:box-shadow .4s,background .4s,border-color .4s}
+.kb[data-tier="5"]{animation:blaze .9s ease-in-out infinite alternate}
+@keyframes blaze{from{filter:brightness(1)}to{filter:brightness(1.18)}}
+/* streak heat counter (tiny, above keyboard) */
+.heat{display:flex;align-items:center;gap:6px;justify-content:center;margin-bottom:6px;font-size:.78rem;color:var(--dim)}
+.heat .bar{display:flex;gap:2px}
+.heat .bar i{width:14px;height:5px;border-radius:2px;background:var(--line);display:block}
+.heat[data-tier="1"] .bar i:nth-child(-n+1){background:var(--cyan)}
+.heat[data-tier="2"] .bar i:nth-child(-n+2){background:var(--green)}
+.heat[data-tier="3"] .bar i:nth-child(-n+3){background:var(--gold)}
+.heat[data-tier="4"] .bar i:nth-child(-n+4){background:var(--magenta)}
+.heat[data-tier="5"] .bar i:nth-child(-n+5){background:#ff7a2b;box-shadow:0 0 6px rgba(255,122,43,.7)}
 @media(max-width:720px){h1{font-size:2rem}.timer{font-size:2.4rem}.panel{max-width:none;width:100%}}
 /* confetti for finish line */
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:1001}
@@ -90,6 +108,7 @@ body.shake{animation:shake .12s}
       <div class="mode" data-mode="combo">🔥 COMBO</div>
     </div>
     <div class="chain" id="chain"></div>
+    <div class="heat" id="heat"><span class="bar"><i></i><i></i><i></i><i></i><i></i></span><span id="heatTxt">streak</span></div>
     <div class="kb" id="kb"></div>
     <div class="timer" id="timer">0.00</div>
     <div class="penalty" id="penalty"></div>
@@ -111,11 +130,11 @@ body.shake{animation:shake .12s}
 const A='abcdefghijklmnopqrstuvwxyz'.split('');
 const MISS_PENALTY=0.5;
 const TOKEN_KEY='as_token', NAME_KEY='as_name';
-/* ADHD-first design: every single correct key fires AT LEAST three different rewards within the same frame:
- * 1. fast blip (rising musical staircase) 2. firework burst 3. letter pop + neon keycap.
- * Every 5 letters: streak badge + screen flash + confetti burst.
- * Lockout mode resets to 'a' but keeps misses counted as progress toward combo.
- * No waiting, no modal, no fail screen — the run NEVER dead-ends. */
+/* ADHD-first design: every single correct key fires AT LEAST three rewards same frame:
+ * 1. fast blip (rising musical staircase) 2. firework burst anchored AT the key 3. letter pop + neon keycap.
+ * Milestone beat every 5 (gold tile pulse + bigger burst, anchored — NO screen flash/confetti).
+ * Lockout mode resets to 'a' but keeps misses counted.
+ * No waiting, no modal, no fail screen — the run NEVER dead-ends. Wrong keys before 'a' are ignored (GDD §7). */
 const nowHi=()=>performance.now();
 
 /* ---------- API ---------- */
@@ -130,7 +149,7 @@ const api=async(path,body)=>{
 };
 
 /* ---------- state ---------- */
-let mode='sprint',chain=0,misses=0,t0=0,running=false,raf=null,hot=false;
+let mode='sprint',chain=0,misses=0,streak=0,t0=0,running=false,raf=null,hot=false;
 const me=()=>localStorage.getItem(NAME_KEY);
 
 /* ---------- auth (username + password only, no email) ---------- */
@@ -199,10 +218,10 @@ const pw=(x,y,c,n=12)=>{for(let i=0;i<n;i++){const a=Math.random()*6.283,s=1+Mat
   parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,c});}};
 function confettiBurst(){
   const cols=['#00e5ff','#ff2bd6','#2bd66f','#ffd54a','#ff9f43'];
-  for(let i=0;i<80;i++){
-    confetti.push({x:innerWidth/2+(Math.random()-.5)*260,y:innerHeight*.42,
-      vx:(Math.random()-.5)*9,vy:-5-Math.random()*7,g:.22+Math.random()*.14,
-      rot:Math.random()*6.283,vr:(Math.random()-.5)*.4,c:cols[i%5],w:4+Math.random()*4,h:6+Math.random()*5,life:.9});
+  for(let i=0;i<36;i++){
+    confetti.push({x:innerWidth/2+(Math.random()-.5)*180,y:innerHeight*.38,
+      vx:(Math.random()-.5)*7,vy:-4-Math.random()*5,g:.24+Math.random()*.15,
+      rot:Math.random()*6.283,vr:(Math.random()-.5)*.4,c:cols[i%5],w:3.5+Math.random()*3.5,h:5+Math.random()*4,life:.85});
   }
 }
 (function loop(){
@@ -266,7 +285,10 @@ function flashScreen(){
 const startBtn=document.getElementById('startBtn');
 const timerEl=document.getElementById('timer');
 function startGame(){
-  chain=0;misses=0;t0=0;running=false;hot=false;cancelAnimationFrame(raf);
+  chain=0;misses=0;streak=0;t0=0;running=false;hot=false;cancelAnimationFrame(raf);
+  document.getElementById('kb').dataset.tier=0;
+  const heat=document.getElementById('heat');heat.dataset.tier=0;
+  document.getElementById('heatTxt').textContent='streak';
   timerEl.textContent='0.00';timerEl.className='timer';document.getElementById('penalty').textContent='';
   const st=document.getElementById('status');st.textContent='type a to start…';st.className='';
   startBtn.disabled=true;renderChain();
@@ -289,7 +311,14 @@ function onKey(e){
   const expected=A[chain]??'a';
   const st=document.getElementById('status');
   if(k!==expected){
+    if(!running)return;                 // GDD §7: wrong keys before 'a' ignored, no penalty
     misses++;
+    streak=0;                           // miss breaks the streak: backlight cools instantly
+    const kb=document.getElementById('kb');
+    kb.dataset.tier=0;
+    const heat=document.getElementById('heat');
+    heat.dataset.tier=0;
+    document.getElementById('heatTxt').textContent='streak';
     if(mode==='lockout'){chain=0;renderChain();}
     st.textContent=mode==='lockout'?'💥 back to a — go go go!':'✗ oops (+0.5s) — keep going!';
     st.className='err';
@@ -306,18 +335,36 @@ function onKey(e){
   blip(f,false);
   popLetter(chain);
   flashKb(chain,true);
-  const colors=[CSSV('--cyan'),CSSV('--magenta'),CSSV('--green'),CSSV('--gold')];
-  pw(innerWidth/2+(Math.random()-.5)*300,innerHeight*.42,colors[chain%4],14);
+  streak++;                                   // ambient backlight follows streak
+  {
+    const tier=Math.min(5,Math.floor(streak/5));  // 5/10/15/20/25 streak → tier 1..5
+    const kb=document.getElementById('kb');
+    kb.dataset.tier=tier;
+    const heat=document.getElementById('heat');
+    heat.dataset.tier=tier;
+    document.getElementById('heatTxt').textContent=tier?'streak '+streak+' — '+['','warm','hot','glowing','blazing','NUCLEAR'][tier]:'streak';
+  }
+  // per-key particle burst anchored AT the letter itself, not screen centre
+  {
+    const tile=document.getElementById('chain').children[Math.min(chain,25)];
+    if(tile){
+      const r=tile.getBoundingClientRect();
+      pw(r.left+r.width/2,r.top+r.height/2,[
+        CSSV('--cyan'),CSSV('--magenta'),CSSV('--green'),CSSV('--gold')][chain%4],7);
+    }
+  }
   timerEl.classList.add('hot');
   chain++;
-  /* every 5 letters: big moment */
-  if(chain%5===0&&chain<26){
-    showStreak(chain);
-    flashScreen();
-    if(Date.now()-lastCheerAt>700){cheer(CHEERS[(chain/5-1)%CHEERS.length],chain>=20);lastCheerAt=Date.now();}
-    confettiBurst();
-  }
   penaltyText();renderChain();
+  /* milestone beat every 5 (all modes): anchored gold tile pulse + bigger
+     burst — chunking rhythm from GDD §5, NO screen flash / confetti (Barry's ask).
+     combo additionally keeps its centred streak badge. */
+  if(chain%5===0&&chain<26){
+    if(mode==='combo')showStreak(chain);
+    const mt=document.getElementById('chain').children[chain-1];
+    if(mt){mt.classList.add('mile');setTimeout(()=>mt.classList.remove('mile'),500);
+      const r=mt.getBoundingClientRect();pw(r.left+r.width/2,r.top+r.height/2,CSSV('--gold'),12);}
+  }
   st.textContent='';st.className='';
   if(chain>=26)finishRun(ts);
 }
@@ -338,9 +385,11 @@ async function finishRun(endTs){
   document.getElementById('penalty').textContent=`raw ${raw.toFixed(2)}s + ${pen.toFixed(1)}s penalty`;
   const st=document.getElementById('status');st.textContent='🏁 FINISHED! brilliant!';st.className='ok';
   startBtn.disabled=false;startBtn.textContent='GO AGAIN';
-  isPBCheck(final);
-  cheer('🏁 '+final.toFixed(2)+'s',true);
-  fanfare();confettiBurst();confettiBurst();
+  const isPB=isPBCheck(final);
+  if(!isPB)cheer('🏁 '+final.toFixed(2)+'s',true);
+  fanfare();
+  confettiBurst();          // ONE modest burst at finish only
+  if(isPB)setTimeout(confettiBurst,180);   // PB run = second wave: the score-chase payoff
   timerEl.classList.add('pb');setTimeout(()=>timerEl.classList.remove('pb'),3500);
   const u=me();
   if(u){
@@ -352,7 +401,8 @@ async function finishRun(endTs){
 function isPBCheck(final){
   const k='as_pb_'+mode;
   const pb=parseFloat(localStorage.getItem(k)||'0');
-  if(!pb||final<pb){localStorage.setItem(k,String(final));if(pb)cheer('🏆 NEW PERSONAL BEST!',true);}
+  if(!pb||final<pb){localStorage.setItem(k,String(final));if(pb){cheer('🏆 NEW PERSONAL BEST!',true);return true;}}
+  return false;
 }
 
 /* ---------- leaderboard ---------- */
