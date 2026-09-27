@@ -114,7 +114,7 @@ body.shake{animation:shake .12s}
     <div class="penalty" id="penalty"></div>
     <button class="btn" id="startBtn" style="width:100%;margin-top:10px">START SPRINT</button>
   </div>
-  <div class="panel">
+  <div class="panel" id="boardPanel">
     <h2>LEADERBOARD <span class="badge" id="modeBadge">sprint</span></h2>
     <table>
       <thead><tr><th>#</th><th>Player</th><th>Time</th><th>Miss</th><th>When</th></tr></thead>
@@ -290,10 +290,23 @@ function startGame(){
   const heat=document.getElementById('heat');heat.dataset.tier=0;
   document.getElementById('heatTxt').textContent='streak';
   timerEl.textContent='0.00';timerEl.className='timer';document.getElementById('penalty').textContent='';
-  const st=document.getElementById('status');st.textContent='type a to start…';st.className='';
+  const st=document.getElementById('status');st.textContent='type a or hit SPACE to start…';st.className='';
   startBtn.disabled=true;renderChain();
+  const board=document.getElementById('boardPanel');
+  board.style.opacity='1';board.style.pointerEvents='auto';   // board visible before/during ready state
 }
 startBtn.onclick=startGame;
+/* Enter/Space restarts or starts an attempt (when not typing in auth fields) */
+window.addEventListener('keydown',e=>{
+  if(e.repeat)return;
+  const tag=(document.activeElement||{}).tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='BUTTON')return;
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();startGame();}
+});
+/* keep keyboard focus locked on the race: blur trailing focus after finish,
+   so Enter/space/keys always hit the game, never a stray button */
+const keepFocus=()=>{const a=document.activeElement;if(a&&(a.tagName==='BUTTON'))a.blur();};
+window.addEventListener('click',keepFocus);
 document.querySelectorAll('.mode').forEach(m=>m.onclick=()=>{
   document.querySelectorAll('.mode').forEach(x=>x.classList.remove('active'));
   m.classList.add('active');mode=m.dataset.mode;
@@ -365,7 +378,13 @@ function onKey(e){
     if(mt){mt.classList.add('mile');setTimeout(()=>mt.classList.remove('mile'),500);
       const r=mt.getBoundingClientRect();pw(r.left+r.width/2,r.top+r.height/2,CSSV('--gold'),12);}
   }
-  st.textContent='';st.className='';
+  /* leaderboard focus policy: dim while racing, full after finish or restart */
+  const board=document.getElementById('boardPanel');
+  const racing=chain<26&&(running||t0>0&&running);
+  board.style.opacity=racing?'0.25':'1';
+  board.style.pointerEvents=racing?'none':'auto';
+  if(chain<26&&!running)st.textContent='type a or hit SPACE to start…';
+  st.className='';
   if(chain>=26)finishRun(ts);
 }
 function tickTimer(){
@@ -384,6 +403,8 @@ async function finishRun(endTs){
   timerEl.classList.remove('hot');
   document.getElementById('penalty').textContent=`raw ${raw.toFixed(2)}s + ${pen.toFixed(1)}s penalty`;
   const st=document.getElementById('status');st.textContent='🏁 FINISHED! brilliant!';st.className='ok';
+  const bp=document.getElementById('boardPanel');
+  bp.style.opacity='1';bp.style.pointerEvents='auto';   // board returns at completion
   startBtn.disabled=false;startBtn.textContent='GO AGAIN';
   const isPB=isPBCheck(final);
   if(!isPB)cheer('🏁 '+final.toFixed(2)+'s',true);
